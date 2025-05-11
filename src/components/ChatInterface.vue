@@ -169,6 +169,7 @@ const sendMessage = async () => {
   font-size: 1rem;
   background: #f8f9fa;
   transition: all 0.3s;
+  color: #2c3e50 !important;
 }
 
 .input-group input:focus {
@@ -241,6 +242,7 @@ const sendMessage = async () => {
   font-size: 1rem;
   background: #f8f9fa;
   transition: all 0.3s;
+  color: #2c3e50 !important;
 }
 
 .input-area input:focus {
