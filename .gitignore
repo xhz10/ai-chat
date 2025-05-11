@@ -1,0 +1,34 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite / Vue
+dist/
+*.local
+.env.local
+.env.*.local
+
+# Mac
+.DS_Store
+
+# VSCode
+.vscode/
+
+# log files
+*.log
+
+# Optional: IDEs
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Optional: system files
+Thumbs.db
+
+# Optional: test coverage
+coverage/
