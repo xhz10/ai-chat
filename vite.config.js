@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 9266,
-    open: '/role-play'
+    open: '/role-play',
+    host: '0.0.0.0'
   }
 })
