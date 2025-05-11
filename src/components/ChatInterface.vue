@@ -22,7 +22,7 @@ const sendMessage = async () => {
   isLoading.value = true
 
   try {
-    const response = await fetch('http://localhost:9265/role-play-reply', {
+    const response = await fetch('http://59.110.33.91:9265/role-play-reply', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
