@@ -6,6 +6,8 @@ const role = ref('')
 const inputDialog = ref('')
 const messages = ref([])
 const isLoading = ref(false)
+const isFirstMessage = ref(true)  // 添加标记是否是第一条消息
+const lastRole = ref('')  // 记录上一次发送消息时的角色
 
 const sendMessage = async () => {
   if (!username.value || !role.value || !inputDialog.value) {
@@ -13,16 +15,36 @@ const sendMessage = async () => {
     return
   }
 
+  // 只在发送消息时检查角色是否发生变化
+  if (messages.value.length > 0 && lastRole.value !== role.value) {
+    if (confirm('更换AI角色将清空当前聊天记录，是否继续？')) {
+      messages.value = []
+    } else {
+      role.value = lastRole.value
+      return
+    }
+  }
+
+  if (isFirstMessage.value) {
+    isFirstMessage.value = false
+  }
+
+  // 更新上一次的角色
+  lastRole.value = role.value
+
   // 添加用户消息到聊天记录
   messages.value.push({
     type: 'user',
     content: inputDialog.value
   })
 
+  const currentInput = inputDialog.value
+  inputDialog.value = ''  // 立即清空输入框
+
   isLoading.value = true
 
   try {
-    const response = await fetch('http://59.110.33.91:9265/role-play-reply', {
+    const response = await fetch('http://127.0.0.1:9265/role-play-reply', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -30,7 +52,7 @@ const sendMessage = async () => {
       body: JSON.stringify({
         username: username.value,
         role: role.value,
-        input_dialog: inputDialog.value
+        input_dialog: currentInput
       })
     })
 
@@ -56,7 +78,14 @@ const sendMessage = async () => {
     })
   } finally {
     isLoading.value = false
-    inputDialog.value = ''
+  }
+}
+
+const clearChat = () => {
+  if (messages.value.length > 0) {
+    if (confirm('确定要清空所有聊天记录吗？')) {
+      messages.value = []
+    }
   }
 }
 </script>
@@ -64,19 +93,39 @@ const sendMessage = async () => {
 <template>
   <div class="chat-container">
     <div class="chat-header">
-      <h1>AI 角色扮演</h1>
-      <p class="subtitle">与 AI 展开一场有趣的对话</p>
+      <div class="header-content">
+        <h1>AI 角色扮演</h1>
+        <p class="subtitle">开启一段奇妙的对话之旅</p>
+      </div>
+      <div class="header-decoration">
+        <span class="decoration-icon">🎭</span>
+      </div>
     </div>
 
     <div class="settings-panel">
       <div class="input-group">
-        <label>你的名字</label>
-        <input v-model="username" placeholder="请输入你的名字" />
+        <label>
+          <span class="label-icon">👤</span>
+          你的名字
+        </label>
+        <input v-model="username" placeholder="请输入你的名字" :disabled="!isFirstMessage" />
       </div>
       <div class="input-group">
-        <label>AI 角色</label>
+        <label>
+          <span class="label-icon">🎯</span>
+          AI 角色
+        </label>
         <input v-model="role" placeholder="请输入 AI 角色" />
       </div>
+      <button 
+        class="clear-button" 
+        @click="clearChat" 
+        :disabled="messages.length === 0"
+        title="清空聊天记录"
+      >
+        <span class="clear-icon">🗑️</span>
+        <span class="clear-text">清空记录</span>
+      </button>
     </div>
 
     <div class="chat-messages" ref="messagesContainer">
@@ -97,6 +146,7 @@ const sendMessage = async () => {
         v-model="inputDialog" 
         @keyup.enter="sendMessage"
         placeholder="输入你想说的话..." 
+        :disabled="isLoading"
       />
       <button @click="sendMessage" :disabled="isLoading">
         <span v-if="!isLoading">发送</span>
@@ -110,90 +160,144 @@ const sendMessage = async () => {
 .chat-container {
   max-width: 1200px;
   margin: 40px auto;
-  padding: 1.5rem 2.5rem 1.5rem 2.5rem;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+  background: linear-gradient(135deg, #f6f8fc 0%, #eef2f7 100%);
   border-radius: 24px;
-  box-shadow: 0 6px 32px 0 rgba(52, 152, 219, 0.08);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .chat-header {
   text-align: center;
-  margin-bottom: 1.2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-content {
+  text-align: center;
+}
+
+.header-decoration {
+  font-size: 2.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
 }
 
 .chat-header h1 {
-  font-size: 2.2rem;
+  font-size: 2.5rem;
   color: #2c3e50;
   margin: 0;
   font-weight: 700;
   background: linear-gradient(120deg, #2c3e50, #3498db);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .subtitle {
   color: #7f8c8d;
-  margin-top: 0.3rem;
-  font-size: 1rem;
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
 }
 
 .settings-panel {
-  background: white;
-  padding: 1rem 1.5rem;
-  border-radius: 14px;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.2rem;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1.5rem;
+  align-items: end;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
 }
 
 .input-group label {
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: #34495e;
-  margin-bottom: 0.3rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label-icon {
+  font-size: 1.2rem;
 }
 
 .input-group input {
-  padding: 0.7rem 1rem;
+  padding: 0.8rem 1rem;
   border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
   background: #f8f9fa;
   transition: all 0.3s;
-  color: #2c3e50 !important;
+  color: #2c3e50;
 }
 
 .input-group input:focus {
   border-color: #3498db;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.08);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.input-group input:disabled {
+  background: #f1f3f5;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .chat-messages {
-  height: 350px;
+  height: 400px;
   min-height: 200px;
-  max-height: 350px;
+  max-height: 400px;
   overflow-y: auto;
-  padding: 1rem 1.5rem;
-  background: white;
-  border-radius: 14px;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .message {
-  margin-bottom: 0.7rem;
+  margin-bottom: 1rem;
   display: flex;
   flex-direction: column;
+  animation: messageSlide 0.3s ease-out;
+}
+
+@keyframes messageSlide {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message.user {
@@ -205,12 +309,12 @@ const sendMessage = async () => {
 }
 
 .message-content {
-  padding: 0.8rem 1.2rem;
-  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  border-radius: 16px;
   max-width: 70%;
-  line-height: 1.5;
+  line-height: 1.6;
   font-size: 1rem;
-  animation: messageAppear 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .message.user .message-content {
@@ -227,46 +331,54 @@ const sendMessage = async () => {
 
 .input-area {
   display: flex;
-  gap: 0.8rem;
-  background: white;
-  padding: 0.7rem 1rem;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .input-area input {
   flex: 1;
-  padding: 0.8rem;
+  padding: 1rem;
   border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
   background: #f8f9fa;
   transition: all 0.3s;
-  color: #2c3e50 !important;
+  color: #2c3e50;
 }
 
 .input-area input:focus {
   border-color: #3498db;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.08);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.input-area input:disabled {
+  background: #f1f3f5;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .input-area button {
-  padding: 0.8rem 1.5rem;
+  padding: 1rem 2rem;
   background: linear-gradient(135deg, #3498db, #2980b9);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
-  min-width: 100px;
+  min-width: 120px;
 }
 
 .input-area button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
 }
 
 .input-area button:disabled {
@@ -279,36 +391,88 @@ const sendMessage = async () => {
 .loading {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.8rem;
   color: #7f8c8d;
-  padding: 0.7rem;
+  padding: 1rem;
   background: #f8f9fa;
-  border-radius: 8px;
-  margin-top: 0.7rem;
+  border-radius: 12px;
+  margin-top: 1rem;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
 }
 
 .loading-spinner {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border: 3px solid #f3f3f3;
   border-top: 3px solid #3498db;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.clear-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.2rem;
+  background: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+  height: fit-content;
+  align-self: flex-end;
 }
 
-@keyframes messageAppear {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+.clear-button:hover:not(:disabled) {
+  background: #e9ecef;
+  color: #495057;
+  border-color: #dee2e6;
+  transform: translateY(-2px);
+}
+
+.clear-button:disabled {
+  background: #f8f9fa;
+  color: #adb5bd;
+  cursor: not-allowed;
+  border-color: #e9ecef;
+}
+
+.clear-icon {
+  font-size: 1.1rem;
+}
+
+.clear-text {
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .chat-container {
+    margin: 20px;
+    padding: 1rem;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .settings-panel {
+    grid-template-columns: 1fr;
+  }
+  
+  .clear-button {
+    justify-content: center;
+  }
+
+  .chat-header {
+    flex-direction: column;
+  }
+
+  .header-decoration {
+    font-size: 2rem;
   }
 }
 
